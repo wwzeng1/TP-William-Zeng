@@ -1,4 +1,7 @@
 from tkinter import *
+from chesspiecesandboard import *
+from checkLogic import * 
+import copy
 # xs are side to side
 def print2DListResult(f):
     def p(*args):
@@ -18,352 +21,10 @@ def print2DListResult(f):
         print(total)
     return p
 
-class Board():
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.cells = 8
-        self.padding = 30
-    def draw(self, canvas):
-        for sideCell in range(self.cells):
-            for vertCell in range(self.cells):
-                if (sideCell + vertCell) % 2 == 0:
-                    canvas.create_rectangle(self.width // self.cells * sideCell, self.height // self.cells * vertCell, 
-                        self.width // self.cells * (sideCell + 1), self.height // self.cells * (vertCell + 1))
-                else:
-                    canvas.create_rectangle(self.width // self.cells * sideCell, self.height // self.cells * vertCell, 
-                        self.width // self.cells * (sideCell + 1), self.height // self.cells * (vertCell + 1), fill = "Black")
-    def highlightPossibleMove(self, canvas, move):
-        canvas.create_oval((self.width // self.cells * move[0]) + self.padding, (self.height // self.cells * move[1]) + self.padding, 
-                        (self.width // self.cells * (move[0] + 1)) - self.padding, (self.height // self.cells * (move[1] + 1)) - self.padding, fill = "Dark Grey", width = 0)
-    
-class Piece():
-    def __init__(self, color, x, y):
-        self.x = x
-        self.y = y
-        self.name = "X"
-        self.cells = 8
-        self.padding = 7
-        self.color = color
-    def draw(self, canvas, width, height):
-        canvas.create_oval((width // self.cells) * self.x + self.padding, (height // self.cells) * self.y + self.padding, 
-                        (width // self.cells) * (self.x + 1) - self.padding, 
-                        (height // self.cells) * (self.y + 1) - self.padding, fill = self.color, outline = "Grey")
-        canvas.create_text(width // self.cells * (self.x + 0.5), height // self.cells * (self.y + 0.5), text = self.name, fill = "Grey")
-    def __eq__(self, other):
-        return isinstance(other, Piece) and other.x == self.x and other.y == self.y
-    def __repr__(self):
-        return self.name
-    def __hash__(self):
-        return hash(self.color)
-    def color(self):
-        return self.color
-    def isTurn(self, isTurn):
-        if self.color == "White" and isTurn:
-            return True
-        elif self.color == "Black" and not isTurn:
-            return True
+@print2DListResult
+def printBoard(board):
+    return board
 
-class Pawn(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "P"
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-    def legalMoves(self, board):
-        possibleMoves = []
-        bMoves = [[self.x, self.y + 1], [self.x, self.y + 2]]
-        bCapture = [[self.x - 1, self.y + 1], [self.x + 1, self.y + 1]]
-        if self.color == "Black":
-            if board[self.x][self.y + 1] == 0:
-                possibleMoves.append([self.x, self.y + 1])
-                if board[self.x][self.y + 2] == 0 and (self.y == 1):
-                    possibleMoves.append([self.x, self.y + 2])
-            if self.x > 0 and board[self.x - 1][self.y + 1] != 0 and board[self.x - 1][self.y + 1].color != "Black":
-                possibleMoves.append([self.x - 1, self.y + 1])
-            if self.x < 7 and board[self.x + 1][self.y + 1] != 0 and board[self.x + 1][self.y + 1].color != "Black":
-                possibleMoves.append([self.x + 1, self.y + 1])
-        if self.color == "White":
-            if board[self.x][self.y - 1] == 0:
-                possibleMoves.append([self.x, self.y - 1])
-                if board[self.x][self.y - 2] == 0 and (self.y == 6):
-                    possibleMoves.append([self.x, self.y - 2])
-            if self.x > 0 and board[self.x - 1][self.y - 1] != 0 and board[self.x - 1][self.y - 1].color != "White":
-                possibleMoves.append([self.x - 1, self.y - 1])
-            if self.x < 7 and board[self.x + 1][self.y - 1] != 0 and board[self.x + 1][self.y - 1].color != "White":
-                possibleMoves.append([self.x + 1, self.y - 1])
-        return possibleMoves
-
-class King(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "K"
-        self.moved = False
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-        self.moved = True
-    def legalMoves(self, board):
-        possibleMoves = []
-        moves = [[self.x, self.y + 1], [self.x, self.y - 1], [self.x + 1, self.y], \
-        [self.x - 1, self.y], [self.x + 1, self.y + 1], [self.x + 1, self.y - 1], \
-        [self.x - 1, self.y + 1], [self.x - 1, self.y - 1]]
-        for move in moves:
-            if 0 <= move[0] <= 7 and 0 <= move[1] <= 7: 
-                checkSquare = board[move[0]][move[1]]
-                if checkSquare == 0 or checkSquare.color != self.color:
-                    possibleMoves.append(move)
-        if not self.moved:
-            if board[self.x + 1][self.y] == board[self.x + 2][self.y] == 0 \
-            and isinstance(board[self.x + 3][self.y], Rook):
-                rook = board[self.x + 3][self.y]
-                print("KINGSIDE CASTLE")
-                if not rook.hasMoved():
-                    possibleMoves.append([self.x + 2, self.y])
-            if board[self.x - 1][self.y] == board[self.x - 2][self.y] == board[self.x - 3][self.y] == 0 \
-            and isinstance(board[self.x - 4][self.y], Rook):
-                rook = board[self.x - 4][self.y]
-                print("QUEENSIDE CASTLE")
-                if not rook.hasMoved():
-                    possibleMoves.append([self.x - 2, self.y])
-        return possibleMoves
-
-    
-
-class Bishop(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "B"
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-    def legalMoves(self, board): 
-        possibleMoves = []
-        
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] - 1])
-        while checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and board[checkSquare[0] - 1][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] + 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] - 1])
-        while checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and board[checkSquare[0] + 1][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] + 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] + 1])
-        while checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and board[checkSquare[0] + 1][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] + 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] - 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] + 1])
-        while checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and board[checkSquare[0] - 1][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] - 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] + 1])
-        return possibleMoves
-
-class Rook(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "R"
-        self.moved = False
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-        self.moved = True
-    def legalMoves(self, board): 
-        possibleMoves = []
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0]][checkSquare[1] - 1], Piece) \
-        and board[checkSquare[0]][checkSquare[1] - 1].color != self.color:
-            possibleMoves.append([checkSquare[0], checkSquare[1] - 1])
-        while checkSquare[1] - 1 >= 0 and board[checkSquare[0]][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0], checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0]][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0]][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0], checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0]][checkSquare[1] + 1], Piece) \
-        and board[checkSquare[0]][checkSquare[1] + 1].color != self.color:
-            possibleMoves.append([checkSquare[0], checkSquare[1] + 1])
-        while checkSquare[1] + 1 <= 7 and board[checkSquare[0]][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0], checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0]][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0]][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0], checkSquare[1] + 1])
-
-        checkSquare = [self.x, self.y] 
-        if checkSquare[0] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1]])   
-        while checkSquare[0] - 1 >= 0 and board[checkSquare[0] - 1][checkSquare[1]] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1]]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1]])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1]])    
-        while checkSquare[0] + 1 <= 7 and board[checkSquare[0] + 1][checkSquare[1]] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1]]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1]])
-        return possibleMoves
-    def hasMoved(self):
-        return self.moved
-
-class Knight(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "N"
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-    def legalMoves(self, board):
-        possibleMoves = []
-        moves = [[self.x + 1, self.y + 2], [self.x + 1, self.y - 2], [self.x + 2, self.y + 1], \
-        [self.x + 2, self.y - 1], [self.x - 2, self.y + 1], [self.x - 2, self.y - 1], \
-        [self.x - 1, self.y + 2], [self.x - 1, self.y - 2]]
-        for move in moves:
-            if 0 <= move[0] <= 7 and 0 <= move[1] <= 7: 
-                checkSquare = board[move[0]][move[1]]
-                if checkSquare == 0 or checkSquare.color != self.color:
-                    possibleMoves.append(move)
-        return possibleMoves
-
-class Queen(Piece):
-    def __init__(self, color, x, y):
-        super().__init__(color, x, y)
-        self.name = self.color[0] + "Q"
-    def move(self, move):
-        self.x = move[0]
-        self.y = move[1]
-    def legalMoves(self, board): # return list of possible moves
-        possibleMoves = []
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0]][checkSquare[1] - 1], Piece) \
-        and board[checkSquare[0]][checkSquare[1] - 1].color != self.color:
-            possibleMoves.append([checkSquare[0], checkSquare[1] - 1])
-        while checkSquare[1] - 1 >= 0 and board[checkSquare[0]][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0], checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0]][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0]][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0], checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0]][checkSquare[1] + 1], Piece) \
-        and board[checkSquare[0]][checkSquare[1] + 1].color != self.color:
-            possibleMoves.append([checkSquare[0], checkSquare[1] + 1])
-        while checkSquare[1] + 1 <= 7 and board[checkSquare[0]][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0], checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0]][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0]][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0], checkSquare[1] + 1])
-
-        checkSquare = [self.x, self.y] 
-        if checkSquare[0] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1]])   
-        while checkSquare[0] - 1 >= 0 and board[checkSquare[0] - 1][checkSquare[1]] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1]]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1]])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1]])    
-        while checkSquare[0] + 1 <= 7 and board[checkSquare[0] + 1][checkSquare[1]] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1]]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1]], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1]].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1]])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] - 1])
-        while checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and board[checkSquare[0] - 1][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] - 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] + 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] - 1])
-        while checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and board[checkSquare[0] + 1][checkSquare[1] - 1] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1] - 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and checkSquare[1] - 1 >= 0 and isinstance(board[checkSquare[0] + 1][checkSquare[1] - 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] - 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] - 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] + 1])
-        while checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and board[checkSquare[0] + 1][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0] + 1, checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] + 1 <= 7 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] + 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] + 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] + 1, checkSquare[1] + 1])
-
-        checkSquare = [self.x, self.y]
-        if checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] - 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] + 1])
-        while checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and board[checkSquare[0] - 1][checkSquare[1] + 1] == 0:
-            checkSquare = [checkSquare[0] - 1, checkSquare[1] + 1]
-            possibleMoves.append(checkSquare)
-            if checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] - 1][checkSquare[1] + 1], Piece) \
-            and board[checkSquare[0] - 1][checkSquare[1] + 1].color != self.color:
-                possibleMoves.append([checkSquare[0] - 1, checkSquare[1] + 1])
-
-        return possibleMoves
-        
 def init(data):
     data.cells = 8
     data.board = [[0 for i in range(data.cells)] for j in range(data.cells)]
@@ -393,45 +54,36 @@ def init(data):
     data.oldSquare = (0, 0)
     data.isWTurn = True
     data.moveList = []
+    data.gameOver = False
 
-def sign(num):
-    if num >= 0:
-        return 1
-    else:
-        return -1
 
-def findPiece(color, PieceType, board):
-    squares = []
-    for x in range(len(board)):
-        for y in range(len(board[x])):
-            if isinstance(board[x][y], PieceType) and board[x][y].color == color:
-                squares.append([x, y])
-    return squares
 
-@print2DListResult
-def printBoard(data):
-    return data.board
-# find all possible moves,
+
 
 
 def mousePressed(event, data):
-    printBoard(data)
     if data.selectedPiece == 0:
         x = event.x // (data.width // data.cells)
         y = event.y // (data.height // data.cells)
         data.selectedPiece = data.board[x][y]
-        if isinstance(data.selectedPiece, Piece):
-            data.moveList = data.selectedPiece.legalMoves(data.board)
         data.oldSquare = [x, y]
+        if isinstance(data.selectedPiece, Piece):
+            king = findPiece(data.selectedPiece.giveColor(), King, data.board)
+            data.moveList = data.selectedPiece.legalMoves(data.board)
+            copyMoveList = copy.deepcopy(data.moveList)
+            for checkMove in data.moveList:
+                checkBoard = makeMove(data.board, data.selectedPiece, checkMove, data.oldSquare)
+                newKing = findPiece(data.selectedPiece.giveColor(), King, checkBoard)
+                if inCheck(newKing, checkBoard):
+                    copyMoveList.remove(checkMove)
+            data.moveList = copyMoveList
     else:
-        king = findPiece(data.selectedPiece.color, King, data.board)
         x = event.x // (data.width // data.cells)
         y = event.y // (data.height // data.cells)
         pieceX = data.oldSquare[0]
         pieceY = data.oldSquare[1]
         move = [x, y]
-        print(data.moveList)
-        if (move in data.moveList):# and data.selectedPiece.isTurn(data.isWTurn):
+        if (move in data.moveList) and data.selectedPiece.isTurn(data.isWTurn):
             data.selectedPiece.move(move)
             if isinstance(data.selectedPiece, King) and move == [pieceX + 2, pieceY]:
                 data.board[pieceX + 3][pieceY].move([pieceX + 1, pieceY])
@@ -452,9 +104,11 @@ def mousePressed(event, data):
             data.selectedPiece = 0
             data.moveList = []
         
+# course notes
 def keyPressed(event, data):
     pass
 
+# course notes
 def redrawAll(canvas, data):
     data.chessBoard.draw(canvas)
     for row in data.board:
@@ -463,6 +117,10 @@ def redrawAll(canvas, data):
                 item.draw(canvas, data.width, data.height)
     for move in data.moveList:
         data.chessBoard.highlightPossibleMove(canvas, move)
+    if data.gameOver:
+        canvas.create(50, 50, data.width - 50, data.height - 50, fill = "Red")
+
+# course notes run function
 def run(width=300, height=300):
     def redrawAllWrapper(canvas, data):
         canvas.delete(ALL)
@@ -500,5 +158,4 @@ def run(width=300, height=300):
     # and launch the app
     root.mainloop()  # blocks until window is closed
     print("bye!")
-
 run(600, 600)
