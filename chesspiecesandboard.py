@@ -1,10 +1,11 @@
+from tkinter import *
 class Board():
     def __init__(self, width, height):
         self.width = width
         self.height = height
         self.cells = 8
         self.padding = 30
-    def draw(self, canvas):
+    def draw(self, canvas):     
         for sideCell in range(self.cells):
             for vertCell in range(self.cells):
                 if (sideCell + vertCell) % 2 == 0:
@@ -29,6 +30,11 @@ class Piece():
         canvas.create_oval((width // self.cells) * self.x + self.padding, (height // self.cells) * self.y + self.padding, 
                         (width // self.cells) * (self.x + 1) - self.padding, 
                         (height // self.cells) * (self.y + 1) - self.padding, fill = self.color, outline = "Grey")
+        # course notes
+        # peicename = r"playing-card-gifs\c1.gif"
+        # one = PhotoImage(file=peicename)
+        # canvas.create_image((0,0), image=one, anchor='nw')
+        # canvas.create_image((width // self.cells) * self.x, (height // self.cells) * self.y + self.padding, image = image)
         canvas.create_text(width // self.cells * (self.x + 0.5), height // self.cells * (self.y + 0.5), text = self.name, fill = "Grey")
     def __eq__(self, other):
         return isinstance(other, Piece) and other.x == self.x and other.y == self.y

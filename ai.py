@@ -2,7 +2,11 @@ from chesspiecesandboard import *
 from checkLogic import * 
 import copy
 import random
-def ai(color, board):
+
+
+def AImoveLogic(event, data):
+	pass
+def AI(color, board):
 	pieces = getPieces(color, board)
 	piece = random.choice(pieces)
 	moveList = piece.legalMoves(board)
