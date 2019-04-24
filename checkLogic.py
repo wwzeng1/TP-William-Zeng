@@ -52,20 +52,17 @@ def makeMove(board, piece, move, oldSquare):
     copyBoard[oldSquare[0]][oldSquare[1]] = 0
     return copyBoard
 
-# def checkmate(king, board):
-#     allLegalMoves = []
-#     copyBoard = copy.deepcopy(board)
-#     kingX = king[0]
-#     kingY = king[1]
-#     for x in range(len(copyBoard)):
-#         for y in range(len(copyBoard)):
-#             square = copyBoard[x][y]
-#             if isinstance(square, Piece) and square.giveColor() == copyBoard[kingX][kingY].giveColor():
-#                 allLegalMoves.extend(square.legalMoves(board))
-#     print(allLegalMoves)
-#     if allLegalMoves == []:
-#         return True
-#     return False
+def checkmate(king, board):
+    allLegalMoves = []
+    copyBoard = copy.deepcopy(board)
+    kingX = king[0]
+    kingY = king[1]
+    for x in range(len(copyBoard)):
+        for y in range(len(copyBoard)):
+            square = copyBoard[x][y]
+            if isinstance(square, Piece) and square.giveColor() == copyBoard[kingX][kingY].giveColor():
+                allLegalMoves.extend(square.legalMoves(board))
+    return (allLegalMoves == [])
 
 def initPieces(data):
     data.cells = 8
@@ -106,6 +103,8 @@ def moveLogic(event, data):
             data.oldSquare = [x, y]
             if isinstance(data.selectedPiece, Piece):
                 king = findPiece(data.selectedPiece.giveColor(), King, data.board)
+                if checkmate(king, data.board):
+                    data.gameOver == True
                 data.moveList = data.selectedPiece.legalMoves(data.board)
                 copyMoveList = copy.deepcopy(data.moveList)
                 for checkMove in data.moveList:
@@ -122,6 +121,8 @@ def moveLogic(event, data):
         move = [x, y]
         if (move in data.moveList) and data.selectedPiece.isTurn(data.isWTurn):
             data.selectedPiece.move(move)
+            if isinstance(data.selectedPiece, Pawn) and data.selectedPiece.y == data.selectedPiece.promRank:
+                data.selectedPiece = Queen(data.selectedPiece.color, x, y)
             if isinstance(data.selectedPiece, King) and move == [pieceX + 2, pieceY]:
                 data.board[pieceX + 3][pieceY].move([pieceX + 1, pieceY])
                 data.board[pieceX + 1][pieceY] = data.board[pieceX + 3][pieceY] 
@@ -130,8 +131,6 @@ def moveLogic(event, data):
                 data.board[pieceX - 4][pieceY].move([pieceX - 1, pieceY])
                 data.board[pieceX - 1][pieceY] = data.board[pieceX - 4][pieceY] 
                 data.board[pieceX - 4][pieceY] = 0
-             # is king checked helper function, return True if not checked
-            # make move then check if the king is checked, then undo move 
             data.board[x][y] = data.selectedPiece
             data.board[data.oldSquare[0]][data.oldSquare[1]] = 0
             data.selectedPiece = 0
@@ -142,12 +141,12 @@ def moveLogic(event, data):
             data.moveList = []
 
 def drawPiecesAndBoard(canvas, data):
-    data.chessBoard.draw(canvas)
+    data.chessBoard.draw(canvas, data.square)
     for row in data.board:
         for item in row:
             if item != 0:
-                item.draw(canvas, data.width, data.height)
+                item.draw(canvas, data.width, data.height, data.imageDict)
     for move in data.moveList:
-        data.chessBoard.highlightPossibleMove(canvas, move)
+        data.chessBoard.highlightPossibleMove(canvas, move, data.highlight)
     if data.gameOver:
-        canvas.create(50, 50, data.width - 50, data.height - 50, fill = "Red")
+        canvas.create(0, 0, data.width, data.height, fill = "red")

@@ -1,22 +1,22 @@
 from tkinter import *
+from PIL import Image, ImageTk
 class Board():
     def __init__(self, width, height):
         self.width = width
         self.height = height
         self.cells = 8
         self.padding = 30
-    def draw(self, canvas):     
+    def draw(self, canvas, image):     
         for sideCell in range(self.cells):
             for vertCell in range(self.cells):
                 if (sideCell + vertCell) % 2 == 0:
                     canvas.create_rectangle(self.width // self.cells * sideCell, self.height // self.cells * vertCell, 
-                        self.width // self.cells * (sideCell + 1), self.height // self.cells * (vertCell + 1))
+                        self.width // self.cells * (sideCell + 1), self.height // self.cells * (vertCell + 1), fill = "White", width = 0)
                 else:
-                    canvas.create_rectangle(self.width // self.cells * sideCell, self.height // self.cells * vertCell, 
-                        self.width // self.cells * (sideCell + 1), self.height // self.cells * (vertCell + 1), fill = "Black")
-    def highlightPossibleMove(self, canvas, move):
-        canvas.create_oval((self.width // self.cells * move[0]) + self.padding, (self.height // self.cells * move[1]) + self.padding, 
-                        (self.width // self.cells * (move[0] + 1)) - self.padding, (self.height // self.cells * (move[1] + 1)) - self.padding, fill = "Dark Grey", width = 0)
+                    canvas.create_image(self.width // self.cells * (sideCell + 0.5), self.height // self.cells * (vertCell + 0.5), image = image)
+    def highlightPossibleMove(self, canvas, move, image):
+        canvas.create_image((self.width // self.cells * (move[0] + 0.5)), (self.height // self.cells * (move[1] + 0.5)), 
+                        image = image)
     
 class Piece():
     def __init__(self, color, x, y):
@@ -26,16 +26,8 @@ class Piece():
         self.cells = 8
         self.padding = 7
         self.color = color
-    def draw(self, canvas, width, height):
-        canvas.create_oval((width // self.cells) * self.x + self.padding, (height // self.cells) * self.y + self.padding, 
-                        (width // self.cells) * (self.x + 1) - self.padding, 
-                        (height // self.cells) * (self.y + 1) - self.padding, fill = self.color, outline = "Grey")
-        # course notes
-        # peicename = r"playing-card-gifs\c1.gif"
-        # one = PhotoImage(file=peicename)
-        # canvas.create_image((0,0), image=one, anchor='nw')
-        # canvas.create_image((width // self.cells) * self.x, (height // self.cells) * self.y + self.padding, image = image)
-        canvas.create_text(width // self.cells * (self.x + 0.5), height // self.cells * (self.y + 0.5), text = self.name, fill = "Grey")
+    def draw(self, canvas, width, height, imageDict):
+        canvas.create_image(100 * (self.x + 0.5), 100 * (self.y + 0.5), image = imageDict[self.name])
     def __eq__(self, other):
         return isinstance(other, Piece) and other.x == self.x and other.y == self.y
     def __repr__(self):
@@ -54,6 +46,9 @@ class Pawn(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "P"
+        self.value = 10
+        if self.color == "White": self.promRank = 0
+        else: self.promRank = 7
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -62,7 +57,7 @@ class Pawn(Piece):
         if self.color == "Black":
             if board[self.x][self.y + 1] == 0:
                 possibleMoves.append([self.x, self.y + 1])
-                if board[self.x][self.y + 2] == 0 and (self.y == 1):
+                if (self.y == 1) and board[self.x][self.y + 2] == 0:
                     possibleMoves.append([self.x, self.y + 2])
             if self.x > 0 and board[self.x - 1][self.y + 1] != 0 and board[self.x - 1][self.y + 1].color != "Black":
                 possibleMoves.append([self.x - 1, self.y + 1])
@@ -71,7 +66,7 @@ class Pawn(Piece):
         if self.color == "White":
             if board[self.x][self.y - 1] == 0:
                 possibleMoves.append([self.x, self.y - 1])
-                if board[self.x][self.y - 2] == 0 and (self.y == 6):
+                if (self.y == 6) and board[self.x][self.y - 2] == 0:
                     possibleMoves.append([self.x, self.y - 2])
             if self.x > 0 and board[self.x - 1][self.y - 1] != 0 and board[self.x - 1][self.y - 1].color != "White":
                 possibleMoves.append([self.x - 1, self.y - 1])
@@ -84,6 +79,7 @@ class King(Piece):
         super().__init__(color, x, y)
         self.name = self.color[0] + "K"
         self.moved = False
+        self.value = 1000
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -102,13 +98,11 @@ class King(Piece):
             if board[self.x + 1][self.y] == board[self.x + 2][self.y] == 0 \
             and isinstance(board[self.x + 3][self.y], Rook):
                 rook = board[self.x + 3][self.y]
-                print("KINGSIDE CASTLE")
                 if not rook.hasMoved():
                     possibleMoves.append([self.x + 2, self.y])
             if board[self.x - 1][self.y] == board[self.x - 2][self.y] == board[self.x - 3][self.y] == 0 \
             and isinstance(board[self.x - 4][self.y], Rook):
                 rook = board[self.x - 4][self.y]
-                print("QUEENSIDE CASTLE")
                 if not rook.hasMoved():
                     possibleMoves.append([self.x - 2, self.y])
         return possibleMoves
@@ -119,6 +113,7 @@ class Bishop(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "B"
+        self.value = 30
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -175,6 +170,7 @@ class Rook(Piece):
         super().__init__(color, x, y)
         self.name = self.color[0] + "R"
         self.moved = False
+        self.value = 50
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -233,6 +229,7 @@ class Knight(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "N"
+        self.value = 30
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -252,6 +249,7 @@ class Queen(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "Q"
+        self.value = 90
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
