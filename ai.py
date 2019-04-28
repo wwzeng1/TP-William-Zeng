@@ -14,6 +14,16 @@ def aiMoves(data):
 		if data.aiColor == "White": isMaximisingPlayer = True
 		else: isMaximisingPlayer = False
 		(square, move) = minimaxRoot(2, data.board, isMaximisingPlayer)
+		# x = move[0]
+		# y = move[1]
+		# if isinstance(square, King) and move == [x + 2, y]:
+		# 	data.board[x + 3][y].move([x + 1, y])
+		# 	data.board[x + 1][y] = data.board[x + 3][y] 
+		# 	data.board[x + 3][y] = 0
+		# if isinstance(square, King) and move == [x - 2, y]:
+		# data.board[x - 4][y].move([x - 1, y])
+		# data.board[x - 1][y] = data.board[x - 4][y] 
+		# data.board[x - 4][y] = 0
 		print((square, move))
 		piece = data.board[square[0]][square[1]]
 		print(piece)
@@ -36,13 +46,16 @@ def generateAllMoves(color, board):
 		square = board[x][y]
 		moveList = square.legalMoves(board)
 		if moveList != []:
-			# for checkMove in moveList:
-			# 		checkBoard = makeMove(board, square, checkMove, oldSquare)
-			# 		king = findPiece(square.giveColor(), King, checkBoard)
-			# 		if inCheck(king, checkBoard):
-			# 			moveList.remove(checkMove)
 			for move in moveList:
-				movesList.append((square, move, oldSquare))
+				oldPiece = board[move[0]][move[1]]
+				movesList.append((square, move, oldSquare, oldPiece))
+	return movesList
+
+def sortMoveList(movesList):
+	for (square, move, oldSquare, oldPiece) in movesList:
+		if oldPiece != 0:
+			movesList.remove((square, move, oldSquare, oldPiece))
+			movesList[0] = (square, move, oldSquare, oldPiece)
 	return movesList
 
 def boardValue(board):
@@ -89,10 +102,10 @@ def boardValue(board):
 				[-2,-1,-1,-1,-1,-1,-1,-2]]
 	pST["N"] = [[-5,-4,-3,-3,-3,-3,-4,-5],
 				[-4,-2,  0,  0,  0,  0,-2,-4],
-				[-3,  0, 1, 1.5, 1.5, 1,  0,-3],
-				[-3,  5, 1.5, 2, 2, 1.5,  5,-3],
-				[-3,  0, 1.5, 2, 2, 1.5,  0,-3],
-				[-3,  5, 1, 1.5, 1.5, 1,  5,-3],
+				[-3,  0, 1, 1.5, 1.5, 1, 0,-3],
+				[-3,  5, 1.5, 2, 2, 1.5, 5,-3],
+				[-3,  0, 1.5, 2, 2, 1.5, 0,-3],
+				[-3,  5, 1, 1.5, 1.5, 1, 5,-3],
 				[-4,-2,  0,  5,  5,  0,-2,-4],
 				[-5,-4,-3,-3,-3,-3,-4,-5]]
 	boardValue = 0
@@ -111,17 +124,17 @@ def boardValue(board):
 					boardValue += pST[pieceName][x][y]
 	return boardValue
 
-def checkMove(board, piece, move, oldSquare):
+def checkMove(board, piece, move, oldSquare, oldPiece):
     x = move[0]
     y = move[1]
     board[x][y] = piece
     board[oldSquare[0]][oldSquare[1]] = 0
     return board
 
-def reverseMove(board, piece, move, oldSquare):
+def reverseMove(board, piece, move, oldSquare, oldPiece):
     x = move[0]
     y = move[1]
-    board[x][y] = 0
+    board[x][y] = oldPiece
     board[oldSquare[0]][oldSquare[1]] = piece
     return board
 
@@ -130,15 +143,15 @@ def minimaxRoot(depth, board, isMaximisingPlayer):
     if isMaximisingPlayer: color = "White"
     else: color = "Black"
     allMoves = generateAllMoves(color, board)
+    allMoves = sortMoveList(allMoves)
     bestSquare = []
     bestMove = -9999
     bestMoveFound = []
     mList = []
-    for (square, move, oldSquare) in allMoves:
-        board = copy.deepcopy(board)
-        board = checkMove(board, square, move, oldSquare)
+    for (square, move, oldSquare, oldPiece) in allMoves:
+        board = checkMove(board, square, move, oldSquare, oldPiece)
         value = minimax(depth, board, -10000, 10000, not isMaximisingPlayer)
-        board = reverseMove(board, square, move, oldSquare)
+        board = reverseMove(board, square, move, oldSquare, oldPiece)
         if value > bestMove:
             mList.append((move, value))
             bestMove = value
@@ -155,21 +168,21 @@ def minimax(depth, board, alpha, beta, isMaximisingPlayer):
     allMoves = generateAllMoves(color, board)
     if (isMaximisingPlayer):
         bestMove = -9999
-        for (square, move, oldSquare) in allMoves:
-            board = checkMove(board, square, move, oldSquare)
+        for (square, move, oldSquare, oldPiece) in allMoves:
+            board = checkMove(board, square, move, oldSquare, oldPiece)
             bestMove = max(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
-            board = reverseMove(board, square, move, oldSquare)
+            board = reverseMove(board, square, move, oldSquare, oldPiece)
             alpha = max(alpha, bestMove)
-            if beta < alpha:
+            if beta <= alpha:
                 return bestMove
         return bestMove
     else:
         bestMove = 9999
-        for (square, move, oldSquare) in allMoves:
-            board = checkMove(board, square, move, oldSquare)
+        for (square, move, oldSquare, oldPiece) in allMoves:
+            board = checkMove(board, square, move, oldSquare, oldPiece)
             bestMove = min(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
-            board = reverseMove(board, square, move, oldSquare)
+            board = reverseMove(board, square, move, oldSquare, oldPiece)
             beta = max(beta, bestMove)
-            if beta < alpha:
+            if beta <= alpha:
                 return bestMove
         return bestMove
