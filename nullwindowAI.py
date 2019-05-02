@@ -18,7 +18,7 @@ def generalAI(data, aiType):
 		elif aiType == "Medium":
 			(square, move) = minimaxRoot(2, data.board, isMaximisingPlayer)
 		elif aiType == "Hard":
-			(square, move) = nullWindowMinimaxRoot(4, data.board, data.aiColor)	
+			(square, move) = nullWindowMinimaxRoot(7, data.board, data.aiColor)	
 		piece = data.board[square[0]][square[1]]
 		checkSpecialMoves(piece, move, square, data)
 		piece.move(move)
@@ -44,7 +44,7 @@ def checkSpecialMoves(piece, move, square, data):
 		data.board[piece.x - 4][piece.y] = 0
 
 def generateAllMoves(color, board):
-	board = np.array(board, dtype=object)
+	board = np.array(board)
 	pieces = []
 	movesList = []
 	for index, square in np.ndenumerate(board):
@@ -194,16 +194,16 @@ def nullWindowMinimax(depth, board, alpha, beta, isMaximisingPlayer):
         for (square, move, oldSquare, oldPiece) in allMoves:
             if firstChild:
             	board = checkMove(board, square, move, oldSquare, oldPiece)
-            	bestMove = max(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
+            	bestMove = max(bestMove, nullWindowMinimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
             	board = reverseMove(board, square, move, oldSquare, oldPiece)
             	firstChild = False
             else:
                 board = checkMove(board, square, move, oldSquare, oldPiece)
-                bestMove = max(bestMove, minimax(depth - 1, board, alpha, alpha - 1, not isMaximisingPlayer))
+                bestMove = max(bestMove, nullWindowMinimax(depth - 1, board, alpha, alpha - 1, not isMaximisingPlayer))
                 board = reverseMove(board, square, move, oldSquare, oldPiece)
                 if beta < bestMove < alpha:
                 	board = checkMove(board, square, move, oldSquare, oldPiece)
-                	bestMove = max(bestMove, minimax(depth - 1, board, alpha, bestMove, not isMaximisingPlayer))
+                	bestMove = max(bestMove, nullWindowMinimax(depth - 1, board, alpha, bestMove, not isMaximisingPlayer))
                 	board = reverseMove(board, square, move, oldSquare, oldPiece)
             alpha = max(alpha, bestMove)
             if beta <= alpha:
@@ -214,16 +214,16 @@ def nullWindowMinimax(depth, board, alpha, beta, isMaximisingPlayer):
         for (square, move, oldSquare, oldPiece) in allMoves:
             if firstChild:
                 board = checkMove(board, square, move, oldSquare, oldPiece)
-                bestMove = min(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
+                bestMove = min(bestMove, nullWindowMinimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
                 board = reverseMove(board, square, move, oldSquare, oldPiece)
                 firstChild = False
             else:
                 board = checkMove(board, square, move, oldSquare, oldPiece)
-                bestMove = min(bestMove, minimax(depth - 1, board, alpha, alpha - 1, not isMaximisingPlayer))
+                bestMove = min(bestMove, nullWindowMinimax(depth - 1, board, alpha, alpha - 1, not isMaximisingPlayer))
                 board = reverseMove(board, square, move, oldSquare, oldPiece)
                 if beta < bestMove < alpha:
                 	board = checkMove(board, square, move, oldSquare, oldPiece)
-                	bestMove = min(bestMove, minimax(depth - 1, board, alpha, bestMove, not isMaximisingPlayer))
+                	bestMove = min(bestMove, nullWindowMinimax(depth - 1, board, alpha, bestMove, not isMaximisingPlayer))
                 	board = reverseMove(board, square, move, oldSquare, oldPiece)
             alpha = max(alpha, bestMove)
             if beta <= alpha:
@@ -283,5 +283,11 @@ def easyAI(board, isMaximisingPlayer):
 	if isMaximisingPlayer: color = "White"
 	else: color = "Black"
 	allMoves = generateAllMoves(color, board)
+	copyAllMoves = copy.deepcopy(allMoves)
+	for (square, move, oldSquare, oldPiece) in copyAllMoves:
+		checkBoard = makeMove(board, square, move, oldSquare)
+		newKing = findPiece(square.giveColor(), King, checkBoard)
+		if inCheck(newKing, checkBoard):
+			allMoves.remove((square, move, oldSquare, oldPiece))
 	(square, move, oldSquare, oldPiece) = random.choice(allMoves)
 	return (oldSquare, move)

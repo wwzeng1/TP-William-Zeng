@@ -17,6 +17,8 @@ class Board():
     def highlightPossibleMove(self, canvas, move, image):
         canvas.create_image((self.width // self.cells * (move[0] + 0.5)), (self.height // self.cells * (move[1] + 0.5)), 
                         image = image)
+    def drawMate(self, canvas, width, height):
+        canvas.create_text(width // 2, height // 2, text = "CHECKMATE", font=("Courier", 44))
     
 class Piece():
     def __init__(self, color, x, y):
@@ -113,7 +115,7 @@ class Bishop(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "B"
-        self.value = 30
+        self.value = 32
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -229,7 +231,7 @@ class Knight(Piece):
     def __init__(self, color, x, y):
         super().__init__(color, x, y)
         self.name = self.color[0] + "N"
-        self.value = 30
+        self.value = 31
     def move(self, move):
         self.x = move[0]
         self.y = move[1]
@@ -343,5 +345,4 @@ class Queen(Piece):
             if checkSquare[0] - 1 >= 0 and checkSquare[1] + 1 <= 7 and isinstance(board[checkSquare[0] - 1][checkSquare[1] + 1], Piece) \
             and board[checkSquare[0] - 1][checkSquare[1] + 1].color != self.color:
                 possibleMoves.append([checkSquare[0] - 1, checkSquare[1] + 1])
-
         return possibleMoves
