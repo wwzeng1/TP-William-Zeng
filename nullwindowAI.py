@@ -1,5 +1,5 @@
 from chesspiecesandboard import *
-from checkLogic import * 
+from checkLogic import *
 import copy
 import random
 import numpy as np

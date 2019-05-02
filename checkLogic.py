@@ -52,18 +52,6 @@ def makeMove(board, piece, move, oldSquare):
     copyBoard[oldSquare[0]][oldSquare[1]] = 0
     return copyBoard
 
-def checkMate(king, data):
-    possibleMoves = generateAllMoves(data.selectedPiece.giveColor(), data.board)
-    copyPossibleMoves = copy.deepcopy(possibleMoves)
-    for checkMove in copyPossibleMoves:
-        (square, move, oldSquare, oldPiece) = checkMove
-        checkBoard = makeMove(data.board, square, move, oldSquare)
-        newKing = findPiece(data.selectedPiece.giveColor(), King, checkBoard)
-        if inCheck(newKing, checkBoard):
-            possibleMoves.remove(checkMove)
-    if possibleMoves == []:
-        data.gameOver = True
-
 def initPieces(data):
     data.cells = 8
     data.board = [[0 for i in range(data.cells)] for j in range(data.cells)]
@@ -95,6 +83,37 @@ def initPieces(data):
     data.moveList = []
     data.gameOver = False
 
+def generateAllMoves(color, board):
+    pieces = []
+    movesList = []
+    for x in range(len(board)):
+        for y in range(len(board)):
+            if isinstance(board[x][y], Piece) and board[x][y].giveColor() == color:
+                pieces.append([x, y])
+    for piece in pieces:
+        x = piece[0]
+        y = piece[1]
+        oldSquare = [x, y]
+        square = board[x][y]
+        moveList = square.legalMoves(board)
+        if moveList != []:
+            for move in moveList:
+                oldPiece = board[move[0]][move[1]]
+                movesList.append((square, move, oldSquare, oldPiece))
+    return movesList
+
+def checkMate(king, data):
+    possibleMoves = generateAllMoves(data.selectedPiece.giveColor(), data.board)
+    copyPossibleMoves = copy.deepcopy(possibleMoves)
+    for checkMove in copyPossibleMoves:
+        (square, move, oldSquare, oldPiece) = checkMove
+        checkBoard = makeMove(data.board, square, move, oldSquare)
+        newKing = findPiece(data.selectedPiece.giveColor(), King, checkBoard)
+        if inCheck(newKing, checkBoard):
+            possibleMoves.remove(checkMove)
+    if possibleMoves == []:
+        data.gameOver = True
+
 def moveLogic(event, data):
     if data.selectedPiece == 0:
             x = event.x // (data.width // data.cells)
@@ -103,8 +122,8 @@ def moveLogic(event, data):
             data.oldSquare = [x, y]
             if isinstance(data.selectedPiece, Piece):
                 king = findPiece(data.selectedPiece.giveColor(), King, data.board)
-                if checkMate(king, data.board):
-                    data.gameOver == True
+                if inCheck(king, data.board):
+                    checkMate(king, data)
                 data.moveList = data.selectedPiece.legalMoves(data.board)
                 copyMoveList = copy.deepcopy(data.moveList)
                 for checkMove in data.moveList:
