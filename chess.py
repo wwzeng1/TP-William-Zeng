@@ -1,7 +1,7 @@
 from tkinter import *
 from chesspiecesandboard import *
 from checkLogic import * 
-from ai import *
+from nullwindowAI import *
 from PIL import Image, ImageTk
 import random
 import copy
@@ -15,6 +15,7 @@ def init(data):
     data.aiColor = "White"
     data.imageDict = dict()
     data.size = 100
+    data.difficulty = ""
     initPieces(data)
     importImages(data)
 
@@ -26,6 +27,8 @@ def importImages(data):
         data.imageDict[piece] = image
     mainScreen = Image.open("mainScreen.png").resize((data.width, data.height), Image.ANTIALIAS)
     data.mainScreen = ImageTk.PhotoImage(mainScreen)
+    diffSelect = Image.open("diffScreen.png").resize((data.width, data.height), Image.ANTIALIAS)
+    data.diffSelect = ImageTk.PhotoImage(diffSelect)
     move = Image.open("move.png").resize((data.size, data.size), Image.ANTIALIAS)
     data.highlight = ImageTk.PhotoImage(move)
     square = Image.open("wsquare.png").resize((data.size, data.size), Image.ANTIALIAS)
@@ -35,50 +38,50 @@ def importImages(data):
 def mousePressed(event, data):
     if (data.mode == "mainScreen"):   mainScreenMousePressed(event, data)
     elif (data.mode == "twoP"):       twoPMousePressed(event, data)
-    elif (data.mode == "AI"):         AIMousePressed(event, data)
+    elif (data.mode == "diffSelect"): diffSelectMousePressed(event, data)
     elif (data.mode == "help"):       helpMousePressed(event, data)
+    elif (data.mode == "AI"):         AIMousePressed(event, data)
 
 def keyPressed(event, data):
     if (data.mode == "mainScreen"):   mainScreenKeyPressed(event, data)
     elif (data.mode == "twoP"):       twoPKeyPressed(event, data)
-    elif (data.mode == "AI"):         AIKeyPressed(event, data)
+    elif (data.mode == "diffSelect"): diffSelectKeyPressed(event, data)
     elif (data.mode == "help"):       helpKeyPressed(event, data)
-
+    elif (data.mode == "AI"):         AIKeyPressed(event, data)
 def timerFired(data):
-    if (data.mode == "AI"):AITimerFired(data)
-    elif (data.mode == "twoP"): twoPTimerFired(data)
-
-def redrawAll(event, data):
-    if (data.mode == "mainScreen"):   mainScreenRedrawAll(event, data)
-    elif (data.mode == "twoP"):       twoPRedrawAll(event, data)
-    elif (data.mode == "AI"):         AIRedrawAll(event, data)
-    elif (data.mode == "help"):       helpRedrawAll(event, data)
+    if (data.mode == "diffSelect"):  diffSelectTimerFired(data)
+    elif (data.mode == "twoP"):      twoPTimerFired(data)
+    if (data.mode == "AI"):          AITimerFired(data)
+def redrawAll(canvas, data):
+    if (data.mode == "mainScreen"):   mainScreenRedrawAll(canvas, data)
+    elif (data.mode == "twoP"):       twoPRedrawAll(canvas, data)
+    elif (data.mode == "diffSelect"): diffSelectRedrawAll(canvas, data)
+    elif (data.mode == "help"):       helpRedrawAll(canvas, data)
+    elif (data.mode == "AI"):         AIRedrawAll(canvas, data)
 
 ######################################################
 def mainScreenMousePressed(event, data):
-    modes = ["twoP", "AI", "help"]
+    modes = ["twoP", "diffSelect", "help"]
     if 220 <= event.x <= 580:
         if 380 <= event.y <= 460:
             data.cursorPos = 0
-            print(data.cursorPos)
             data.mode = modes[data.cursorPos]
         if 480 <= event.y <= 560:
             data.cursorPos = 1
-            print(data.cursorPos)
             data.mode = modes[data.cursorPos]
         elif 580 <= event.y <= 660:
             data.cursorPos = 2
-            print(data.cursorPos)
             data.mode = modes[data.cursorPos]
 
 def mainScreenKeyPressed(event, data):
-    modes = ["twoP", "AI", "help"]
+    modes = ["twoP", "diffSelect", "help"]
     if event.keysym == "Down" and data.cursorPos < 2:
         data.cursorPos += 1
     elif event.keysym == "Up" and data.cursorPos > 0:
         data.cursorPos -= 1
     elif event.keysym == "Return":
         data.mode = modes[data.cursorPos]
+        data.cursorPos = 0    
 
 def mainScreenRedrawAll(canvas, data):
     canvas.create_image(data.width // 2, data.height // 2, image = data.mainScreen)
@@ -97,6 +100,8 @@ def twoPKeyPressed(event, data):
         data.mode = "help"
     elif (event.keysym == "p"):
         data.mode = "mainScreen"
+    elif (event.keysym == "r"):
+        init(data)
 
 def twoPTimerFired(data):
     pass
@@ -106,10 +111,45 @@ def twoPRedrawAll(canvas, data):
 
 # course notes run function
 #######################################################
+def diffSelectMousePressed(event, data):
+    modes = ["Easy", "Medium", "Hard"]
+    if 220 <= event.x <= 580:
+        if 380 <= event.y <= 460:
+            data.cursorPos = 0
+            data.difficulty = modes[data.cursorPos]
+            data.mode = "AI"
+        if 480 <= event.y <= 560:
+            data.cursorPos = 1
+            data.difficulty = modes[data.cursorPos]
+            data.mode = "AI"
+        elif 580 <= event.y <= 660:
+            data.cursorPos = 2
+            data.difficulty = modes[data.cursorPos]
+            data.mode = "AI"
 
+def diffSelectKeyPressed(event, data):
+    data.cursorPos = 0
+    modes = ["Easy", "Medium", "Hard"]
+    if event.keysym == "Down" and data.cursorPos < 2:
+        data.cursorPos += 1
+    elif event.keysym == "Up" and data.cursorPos > 0:
+        data.cursorPos -= 1
+    elif event.keysym == "Return":
+        data.difficulty = modes[data.cursorPos]
+        data.mode = "AI"
+
+def diffSelectRedrawAll(canvas, data):
+    canvas.create_image(data.width // 2, data.height // 2, image = data.diffSelect)
+    canvas.create_line(280, 445 + (105 * data.cursorPos), 520, 445 + (105 * data.cursorPos), fill = "#999999", width = 5)
+
+def diffSelectTimerFired(data):
+    pass
+
+# course notes run function
+#######################################################
 def AIMousePressed(event, data):
     AImoveLogic(event, data)
-        
+
 def AIKeyPressed(event, data):
     if (event.keysym == 'h'):
         data.prevMode = data.mode
@@ -118,7 +158,8 @@ def AIKeyPressed(event, data):
         data.mode = "mainScreen"
 
 def AITimerFired(data):
-    aiMoves(data)
+    if data.difficulty != "":
+        generalAI(data, data.difficulty)
 
 def AIRedrawAll(canvas, data):
     drawPiecesAndBoard(canvas, data)
