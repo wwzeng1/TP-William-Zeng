@@ -29,6 +29,8 @@ def importImages(data):
     data.mainScreen = ImageTk.PhotoImage(mainScreen)
     diffSelect = Image.open("diffScreen.png").resize((data.width, data.height), Image.ANTIALIAS)
     data.diffSelect = ImageTk.PhotoImage(diffSelect)
+    helpScreen = Image.open("helpScreen.png").resize((data.width, data.height), Image.ANTIALIAS)
+    data.helpScreen = ImageTk.PhotoImage(helpScreen)
     move = Image.open("move.png").resize((data.size, data.size), Image.ANTIALIAS)
     data.highlight = ImageTk.PhotoImage(move)
     square = Image.open("wsquare.png").resize((data.size, data.size), Image.ANTIALIAS)
@@ -128,7 +130,6 @@ def diffSelectMousePressed(event, data):
             data.mode = "AI"
 
 def diffSelectKeyPressed(event, data):
-    data.cursorPos = 0
     modes = ["Easy", "Medium", "Hard"]
     if event.keysym == "Down" and data.cursorPos < 2:
         data.cursorPos += 1
@@ -176,7 +177,7 @@ def helpKeyPressed(event, data):
         data.mode = data.prevMode
 
 def helpRedrawAll(canvas, data):
-    canvas.create_text(data.width // 2, data.height // 2, text = "How To play Chess")
+    canvas.create_image(data.width // 2, data.height // 2, image = data.helpScreen)
 
 #######################################################
 def run(width=300, height=300):

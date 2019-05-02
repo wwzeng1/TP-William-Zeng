@@ -120,7 +120,7 @@ def moveLogic(event, data):
             y = event.y // (data.height // data.cells)
             data.selectedPiece = data.board[x][y]
             data.oldSquare = [x, y]
-            if isinstance(data.selectedPiece, Piece):
+            if isinstance(data.selectedPiece, Piece) and  data.selectedPiece.isTurn(data.isWTurn):
                 king = findPiece(data.selectedPiece.giveColor(), King, data.board)
                 if inCheck(king, data.board):
                     checkMate(king, data)
