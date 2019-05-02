@@ -52,17 +52,17 @@ def makeMove(board, piece, move, oldSquare):
     copyBoard[oldSquare[0]][oldSquare[1]] = 0
     return copyBoard
 
-def checkmate(king, board):
-    allLegalMoves = []
-    copyBoard = copy.deepcopy(board)
-    kingX = king[0]
-    kingY = king[1]
-    for x in range(len(copyBoard)):
-        for y in range(len(copyBoard)):
-            square = copyBoard[x][y]
-            if isinstance(square, Piece) and square.giveColor() == copyBoard[kingX][kingY].giveColor():
-                allLegalMoves.extend(square.legalMoves(board))
-    return (allLegalMoves == [])
+def checkMate(king, data):
+    possibleMoves = generateAllMoves(data.selectedPiece.giveColor(), data.board)
+    copyPossibleMoves = copy.deepcopy(possibleMoves)
+    for checkMove in copyPossibleMoves:
+        (square, move, oldSquare, oldPiece) = checkMove
+        checkBoard = makeMove(data.board, square, move, oldSquare)
+        newKing = findPiece(data.selectedPiece.giveColor(), King, checkBoard)
+        if inCheck(newKing, checkBoard):
+            possibleMoves.remove(checkMove)
+    if possibleMoves == []:
+        data.gameOver = True
 
 def initPieces(data):
     data.cells = 8
@@ -103,7 +103,7 @@ def moveLogic(event, data):
             data.oldSquare = [x, y]
             if isinstance(data.selectedPiece, Piece):
                 king = findPiece(data.selectedPiece.giveColor(), King, data.board)
-                if checkmate(king, data.board):
+                if checkMate(king, data.board):
                     data.gameOver == True
                 data.moveList = data.selectedPiece.legalMoves(data.board)
                 copyMoveList = copy.deepcopy(data.moveList)
@@ -149,4 +149,4 @@ def drawPiecesAndBoard(canvas, data):
     for move in data.moveList:
         data.chessBoard.highlightPossibleMove(canvas, move, data.highlight)
     if data.gameOver:
-        canvas.create(0, 0, data.width, data.height, fill = "red")
+        data.chessBoard.drawMate(canvas, data.width, data.height)

@@ -8,12 +8,17 @@ def AImoveLogic(event, data):
 	if (data.isWTurn == True and data.aiColor == "Black") or (data.isWTurn == False and data.aiColor == "White"):
 		moveLogic(event, data)
 
-def miniMaxAI(data):
+def generalAI(data, aiType):
 	if (data.isWTurn == False and data.aiColor == "Black") or (data.isWTurn == True and data.aiColor == "White"):
 		data.isWTurn = not data.isWTurn
 		if data.aiColor == "White": isMaximisingPlayer = True
 		else: isMaximisingPlayer = False
-		(square, move) = minimaxRoot(4, data.board, data.aiColor)
+		if aiType == "Easy":
+			(square, move) = easyAI(data.board, isMaximisingPlayer)
+		elif aiType == "Medium":
+			(square, move) = minimaxRoot(2, data.board, isMaximisingPlayer)
+		elif aiType == "Hard":
+			(square, move) = nullWindowMinimaxRoot(4, data.board, data.aiColor)	
 		piece = data.board[square[0]][square[1]]
 		checkSpecialMoves(piece, move, square, data)
 		piece.move(move)
@@ -37,6 +42,7 @@ def checkSpecialMoves(piece, move, square, data):
 		data.board[piece.x - 4][piece.y].move([piece.x - 1, piece.y])
 		data.board[piece.x - 1][piece.y] = data.board[piece.x - 4][piece.y] 
 		data.board[piece.x - 4][piece.y] = 0
+
 def generateAllMoves(color, board):
 	board = np.array(board, dtype=object)
 	pieces = []
@@ -152,7 +158,7 @@ def reverseMove(board, piece, move, oldSquare, oldPiece):
     return board
 
 # found from online https://medium.freecodecamp.org/simple-chess-ai-step-by-step-1d55a9266977
-def minimaxRoot(depth, board, isMaximisingPlayer):
+def nullWindowMinimaxRoot(depth, board, isMaximisingPlayer):
     if isMaximisingPlayer: color = "White"
     else: color = "Black"
     allMoves = generateAllMoves(color, board)
@@ -163,7 +169,7 @@ def minimaxRoot(depth, board, isMaximisingPlayer):
     mList = []
     for (square, move, oldSquare, oldPiece) in allMoves:
         board = checkMove(board, square, move, oldSquare, oldPiece)
-        value = minimax(depth, board, -10000, 10000, not isMaximisingPlayer)
+        value = nullWindowMinimax(depth, board, -10000, 10000, not isMaximisingPlayer)
         printBoard(board)
         board = reverseMove(board, square, move, oldSquare, oldPiece)
         if value > bestMove:
@@ -174,7 +180,8 @@ def minimaxRoot(depth, board, isMaximisingPlayer):
         print(mList)
     return (bestSquare, bestMoveFound)
 
-def minimax(depth, board, alpha, beta, isMaximisingPlayer):
+# adapted from pseudocode found on wikipedia
+def nullWindowMinimax(depth, board, alpha, beta, isMaximisingPlayer):
     firstChild = True
     if isMaximisingPlayer: color = "White"
     else: color = "Black"
@@ -222,3 +229,59 @@ def minimax(depth, board, alpha, beta, isMaximisingPlayer):
             if beta <= alpha:
                 return bestMove
         return bestMove
+
+# found from online https://medium.freecodecamp.org/simple-chess-ai-step-by-step-1d55a9266977
+def minimaxRoot(depth, board, isMaximisingPlayer):
+    if isMaximisingPlayer: color = "White"
+    else: color = "Black"
+    allMoves = generateAllMoves(color, board)
+    allMoves = sortMoveList(allMoves)
+    bestSquare = []
+    bestMove = -9999
+    bestMoveFound = []
+    mList = []
+    for (square, move, oldSquare, oldPiece) in allMoves:
+        board = checkMove(board, square, move, oldSquare, oldPiece)
+        value = minimax(depth, board, -10000, 10000, not isMaximisingPlayer)
+        board = reverseMove(board, square, move, oldSquare, oldPiece)
+        if value > bestMove:
+            mList.append((move, value))
+            bestMove = value
+            bestMoveFound = move
+            bestSquare = oldSquare
+        print(mList)
+    return (bestSquare, bestMoveFound)
+
+def minimax(depth, board, alpha, beta, isMaximisingPlayer):
+    if isMaximisingPlayer: color = "White"
+    else: color = "Black"
+    if (depth == 0):
+        return boardValue(board)
+    allMoves = generateAllMoves(color, board)
+    if (isMaximisingPlayer):
+        bestMove = -9999
+        for (square, move, oldSquare, oldPiece) in allMoves:
+            board = checkMove(board, square, move, oldSquare, oldPiece)
+            bestMove = max(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
+            board = reverseMove(board, square, move, oldSquare, oldPiece)
+            alpha = max(alpha, bestMove)
+            if beta <= alpha:
+                return bestMove
+        return bestMove
+    else:
+        bestMove = 9999
+        for (square, move, oldSquare, oldPiece) in allMoves:
+            board = checkMove(board, square, move, oldSquare, oldPiece)
+            bestMove = min(bestMove, minimax(depth - 1, board, alpha, beta, not isMaximisingPlayer))
+            board = reverseMove(board, square, move, oldSquare, oldPiece)
+            beta = max(beta, bestMove)
+            if beta <= alpha:
+                return bestMove
+        return bestMove
+
+def easyAI(board, isMaximisingPlayer):
+	if isMaximisingPlayer: color = "White"
+	else: color = "Black"
+	allMoves = generateAllMoves(color, board)
+	(square, move, oldSquare, oldPiece) = random.choice(allMoves)
+	return (oldSquare, move)
